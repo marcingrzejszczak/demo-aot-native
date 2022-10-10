@@ -7,6 +7,8 @@ import com.example.demo.DemoController.DemoControllerRuntimeHints;
 import com.example.demo.hello.HelloService;
 import com.example.demo.hello.ResourceHelloService;
 import com.example.demo.hello.SimpleHelloService;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 
 import org.springframework.aot.hint.ExecutableMode;
 import org.springframework.aot.hint.RuntimeHints;
@@ -15,6 +17,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.log.LogAccessor;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,16 +28,28 @@ import org.springframework.web.bind.annotation.RestController;
 @ImportRuntimeHints(DemoControllerRuntimeHints.class)
 public class DemoController {
 
+	private final LogAccessor log = new LogAccessor(DemoController.class);
+
 	private final ObjectProvider<HelloService> helloServices;
 
-	DemoController(ObjectProvider<HelloService> helloServices) {
+	private final ObservationRegistry observationRegistry;
+
+	DemoController(ObjectProvider<HelloService> helloServices, ObjectProvider<ObservationRegistry> observationRegistry) {
 		this.helloServices = helloServices;
+		this.observationRegistry = observationRegistry.getIfAvailable(() -> ObservationRegistry.NOOP);
 	}
 
 	@GetMapping("/hello")
 	HelloResponse hello(@RequestParam(required = false) String mode) throws Exception {
-		String message = getHelloMessage(mode, "Native");
-		return new HelloResponse(message);
+		log.info("Got a request!");
+		return Observation.createNotStarted("my.observation", this.observationRegistry)
+				.contextualName("my-observation")
+				.lowCardinalityKeyValue("foo", "bar")
+				.highCardinalityKeyValue("baz", "daz")
+				.observeChecked(() -> {
+					String message = getHelloMessage(mode, "Native");
+					return new HelloResponse(message);
+				});
 	}
 
 	private String getHelloMessage(String mode, String name) throws Exception {

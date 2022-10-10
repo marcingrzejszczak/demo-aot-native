@@ -5,6 +5,7 @@ import java.util.Collections;
 import com.example.demo.hello.HelloService;
 import com.example.demo.hello.SimpleHelloService;
 import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.observation.aop.ObservedAspect;
 import jakarta.servlet.DispatcherType;
 
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -28,7 +29,7 @@ class DemoConfiguration {
 				DispatcherType.INCLUDE, DispatcherType.REQUEST);
 		filterRegistrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE);
 		// We provide a list of URLs that we want to create observations for
-		filterRegistrationBean.setUrlPatterns(Collections.singletonList("/foo"));
+		filterRegistrationBean.setUrlPatterns(Collections.singletonList("/hello"));
 		return filterRegistrationBean;
 	}
 }
